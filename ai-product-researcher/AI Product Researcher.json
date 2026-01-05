@@ -1,0 +1,1603 @@
+{
+  "name": "AI Product Researcher",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "abc1",
+              "name": "product_name",
+              "value": "={{ $json.product_name }}",
+              "type": "string"
+            },
+            {
+              "id": "abc2",
+              "name": "output_language",
+              "value": "={{ $json.output_language }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c6ea49da-390a-448a-b560-70ac2fadff75",
+      "name": "User Inputs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        608,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Įvesk duomenis",
+        "formFields": {
+          "values": [
+            {
+              "fieldName": "product_name",
+              "fieldLabel": "Prekės pavadinimas",
+              "requiredField": true
+            },
+            {
+              "fieldName": "output_language",
+              "fieldLabel": "Norima kalba",
+              "fieldType": "dropdown",
+              "defaultValue": "LT",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "LT"
+                  },
+                  {
+                    "option": "EN"
+                  },
+                  {
+                    "option": "LV"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldName": "email",
+              "fieldLabel": "El. pašto adresas rezultatų siuntimui",
+              "fieldType": "email",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": true,
+          "buttonLabel": "Pateikti",
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "=Dėkoju, kad užpildėte formą. AI pradėjo paiešką. Pilną ataskaitą gausite Jūsų įvestu el. pašto adresu maždaug po 2–5 minučių.\""
+            }
+          },
+          "ignoreBots": true
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.4,
+      "position": [
+        384,
+        240
+      ],
+      "id": "f7796329-469a-4a1e-abaa-0aa3f748a5ed",
+      "name": "On form submission",
+      "webhookId": "a4cda64d-10a7-4651-b7ae-1ade0e03a1e6"
+    },
+    {
+      "parameters": {
+        "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Query', ``, 'string') }}",
+        "options": {
+          "search_depth": "basic",
+          "max_results": 10,
+          "include_images": false,
+          "include_image_descriptions": false,
+          "include_favicon": false
+        }
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavilyTool",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        480
+      ],
+      "id": "79d8457b-a531-48f9-bff8-0ede091090dd",
+      "name": "Search in Tavily",
+      "credentials": {
+        "tavilyApi": {
+          "id": "uQ6QEE2NI7MkNTYY",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \"results\": [ {\"website\": \"Name\", \"product_name\": \"Product name that is mentioned in Search or Website\", \"url\": \"URL\", \"reason\": \"Why this is a correct match\"} ] }"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1488,
+        416
+      ],
+      "id": "e1dd489b-823b-4b4f-b1fe-1bc21f07b511",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://YOUR_CRAWL4AI_INSTANCE_URL/crawl/job",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"urls\": [\"{{ $json.url }}\"],\n  \"only_main_content\": true,\n  \"exclude_tags\": [\"nav\", \"footer\", \"header\", \"aside\", \"form\", \"iframe\"],\n  \"word_count_threshold\": 10,\n  \"remove_overlay_elements\": true,\n  \"markdown_generator_config\": {\n    \"ignore_links\": false,\n    \"ignore_images\": false\n  }\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "33d628d9-d019-461c-af30-2bda03ebf37d",
+      "name": "Crawl with Crawl4AI1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        592,
+        848
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "Hk0UbLjAgzzHrvxC",
+          "name": "cawl Bearer Auth"
+        },
+        "httpHeaderAuth": {
+          "id": "JM6HIODDpRJkGRl9",
+          "name": "crawl Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        848
+      ],
+      "id": "de9e537c-8679-437e-a6bb-1a73c5e50ce4",
+      "name": "Wait1",
+      "webhookId": "87f11f24-b772-4fdb-af64-cdf93e5dbca2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "49f2ce06-82b7-4261-a0a5-c9910b8e47be",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1136,
+        848
+      ],
+      "id": "11049255-4bc3-48ea-9dd1-f2c7feed2694",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "url": "=http://YOUR_CRAWL4AI_INSTANCE_URL/crawl/job/{{ $json.task_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "299d080e-6b85-4d46-bf0a-cb4754677a36",
+      "name": "crawl result1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        976,
+        848
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "Hk0UbLjAgzzHrvxC",
+          "name": "cawl Bearer Auth"
+        },
+        "httpHeaderAuth": {
+          "id": "JM6HIODDpRJkGRl9",
+          "name": "crawl Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eeea0feb-16ea-4754-a1d0-9564c3c4c463",
+              "name": "task_id",
+              "value": "={{ $('crawl result1').item.json.task_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1312,
+        992
+      ],
+      "id": "233b5c66-6ce7-41ce-ba76-5e806c25ee2a",
+      "name": "Set task_id1"
+    },
+    {
+      "parameters": {
+        "content": "## SEARCH",
+        "height": 496,
+        "width": 896,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        176
+      ],
+      "id": "95127741-f172-4f8c-90a5-1fb0dd474c72",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## CRAWL & EXTRACT",
+        "height": 496,
+        "width": 1648,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        336,
+        704
+      ],
+      "id": "c3c959d1-5e57-4f6e-b960-a03c42eb99e8",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Product info:\n{{ $('User Inputs').item.json.product_name }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a \"Product Link Validator.\" Your goal is to find 3 direct purchase or official specification URLs for the product provided.\n\nYour Task:\n- Use the Search in Tavily tool to find the exact product (given by the user).\n- Qualify the URLs: Only select links that are actual product pages (e.g., e-commerce sites, official manufacturer pages). Discard blog posts, news articles, or forum discussions.\n- Validation Logic: Ensure the product in the link matches the specific version or attributes mentioned by the user.\n- Output: Return a JSON object with a list of the 3 most relevant and verified URLs.\n\nOutput Format: \n{ \"results\": [ {\"website\": \"Name\", \"product_name\": \"Product name that is mentioned in Search or Website\", \"url\": \"URL\", \"reason\": \"Why this is a correct match\"} ] }",
+          "maxIterations": 10,
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1232,
+        272
+      ],
+      "id": "766703e7-29de-461e-83ff-2840534ea69b",
+      "name": "AI Agent Search"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "=output.results",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        512
+      ],
+      "id": "75cec057-7a30-43c1-a00c-85b82e36b030",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        400,
+        784
+      ],
+      "id": "d9455f57-091b-44c3-b638-abf194f00b1b",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-flash-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Source URL:\n{{ $json.result.results[0].url }}\nMarkdown:\n{{ $json.result.results[0].markdown.raw_markdown }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {
+          "includeMergedResponse": false,
+          "systemMessage": "=# Role: \nYou are a specialized Product Data Extractor. Your goal is to convert raw Markdown into a structured JSON schema without any modification, summary, or translation.\n\n# Objective:\n\n## Validation: \nDetermine if the provided content describes the product: {{ $('User Inputs').item.json.product_name }}.\n\n## Extraction: \nIf it is a match, extract all technical data points precisely as they appear in the source.\n\n## No Translation: \nKeep all text in its original language (as found on the website).\n\n## No Hallucination: \nIf a field is missing, return null. Never invent data.\n\n# Instructions for Specific Fields:\n\n## Attributes: \nCapture everything. Look for tables, bullet points, or \"Technical Specs\" sections. Extract them as key-value pairs (e.g., \"Weight\": \"2.5kg\").\n\n## Images: \nReturn a list of all unique absolute URLs that represent the product (ignore icons, logos, or social media buttons).\n\n## Prices: \nCapture the numerical value and the currency symbol exactly (e.g., \"€149.99\").\n\n# Output Schema (JSON):\n{\n  \"source_url\": \"The current page URL\",\n  \"is_match\": true/false,\n  \"raw_name\": \"Product name as written on site\",\n  \"raw_description\": \"Full description text from the site\",\n  \"price\": \"Price string\",\n  \"category\": \"Breadcrumb or category mentioned\",\n  \"technical_attributes\": {\n    \"attribute_name\": \"attribute_value\"\n  },\n  \"all_images\": [\"url1\", \"url2\"]\n}",
+          "candidateCount": 1,
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1296,
+        832
+      ],
+      "id": "cb39c803-c8aa-4ba1-a4fb-fd3b47d12980",
+      "name": "Extract AI",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "OoDW7TDchnaM5P1i",
+          "name": "Google Gemini"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "result",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        432,
+        1056
+      ],
+      "id": "b2c31cb0-a249-4b08-a115-c88be4e6423f",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3-pro-preview",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        416,
+        1648
+      ],
+      "id": "227648c4-ad00-4cbd-9da2-e4c353674954",
+      "name": "Gemini 3 Pro T.7",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "OoDW7TDchnaM5P1i",
+          "name": "Google Gemini"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3-flash-preview",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        560
+      ],
+      "id": "dac480b4-b557-4226-b8fb-e4ef7ce64f2a",
+      "name": "Gemini 3 Flash T0",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "OoDW7TDchnaM5P1i",
+          "name": "Google Gemini"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// This cleans the AI output even if it includes backticks or \"Here is your JSON\" text\nlet rawOutput = $input.first().json.candidates[0].content.parts[0].text || $json.text || $json.output || \"\";\n\n// 1. Remove Markdown code fences\nrawOutput = rawOutput.replace(/```json/g, \"\").replace(/```/g, \"\").trim();\n\n// 2. Find the first '{' and last '}' to extract the object if text exists around it\nconst start = rawOutput.indexOf('{');\nconst end = rawOutput.lastIndexOf('}');\n\nif (start !== -1 && end !== -1) {\n    const cleanJson = rawOutput.substring(start, end + 1);\n    try {\n        return [{ json: JSON.parse(cleanJson) }];\n    } catch (e) {\n        throw new Error(\"AI output was not valid JSON even after cleaning.\");\n    }\n}\n\nreturn [{ json: { error: \"No JSON found in AI output\" } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        832
+      ],
+      "id": "bf5a6317-34e1-48cb-8af3-ed3aab16d57e",
+      "name": "Cleanup JSON"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Input Data: \n{{ JSON.stringify($json.result) }}",
+        "options": {
+          "systemMessage": "=# Role: \nYou are an expert Multi-Category E-commerce Data Architect.\n\n# Objective: \nSynthesize raw data from 3 sources into a single, high-fidelity \"Master Product Profile.\" Your goal is maximum information density while maintaining professional formatting.\n\n# Instructions:\n\n## 1. Language & Localization:\n- Detect the target language: {{ $('User Inputs').item.json.output_language || 'English' }}. \n- Translate ALL content (Name, Description, Attributes) into this language.\n\n## 2. Product Name & Category:\n- Create a clean, authoritative product title. \n- Strip out retail-specific fluff (e.g., \"In stock,\" \"Sale,\" \"2 Liter\") unless it's a vital part of the brand/model name.\n- Identify the most specific product category possible based on the source data.\n\n## 3. Comprehensive Description:\n- Write a high-quality description (min 4-5 sentences).\n- Use a \"Synthesis\" approach: If Source A mentions the material, Source B mentions the use case, and Source C mentions the benefits—include ALL of them.\n- Do not summarize; enrich. Focus on unique selling points and emotional benefits.\n\n## 4. High-Density Attributes (CRITICAL):\n- DO NOT skip technical details.\n- Merge and de-duplicate attributes from all sources. \n- If sources provide different units (e.g., cm vs inches), convert them or list both.\n- Keep EVERY useful data point (e.g., Dimensions, Material, Power, Weight, Maintenance, Origin, Seasonality, Warranty, etc.).\n- Categorize them clearly. Use human-readable keys (e.g., \"Operating Temperature\" instead of \"temp_range\").\n\n## 5. Intelligence & Conflict Resolution:\n- If sources conflict (e.g., different heights), use the most detailed source or provide the range.\n- If a price is found in only one source, use it with caution. If multiple, use the most standard manufacturer suggested price.\n- Do not hallucinate and ground all of the texts on the given information.\n\n## 6. Image Selection & Validation:\n- Scrutinize `all_images` list.\n- EXCLUDE: Placeholders, blurred images (blur=15), generic icons, or social media buttons.\n- OUTPUT: A list of the top 4 high-resolution, unique product photo URLs.\n\n# Output Format (Strict JSON):\n{\n  \"name\": \"Product Name\",\n  \"price\": \"Price string or null\",\n  \"description\": \"Full product description\",\n  \"category\": \"Main Category\",\n  \"attributes\": [{\n    \"Attribute or Feature Name\": \"Value\"\n  }],\n  \"images\": [\"url1\", \"url2\", \"url3\", \"url4\"]\n}\nIMPORTANT: Your response must be the raw JSON object itself. Do NOT wrap the JSON in an \"output\" key. Do NOT add any introductory text. Start your response with { and end with }",
+          "returnIntermediateSteps": true,
+          "enableStreaming": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        432,
+        1376
+      ],
+      "id": "99871772-3a31-4d08-999d-b7ee15008233",
+      "name": "Synthesis AI"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log Search products online",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1354713432,
+          "mode": "list",
+          "cachedResultName": "LOG",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1354713432"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Request ID": "={{ $execution.id }}",
+            "Timestamp": "={{ $now.setZone('Europe/Vilnius').format('yyyy-MM-dd HH:mm:ss') }}",
+            "Product Input": "={{ $json.product_name }}",
+            "Stage": "START"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Request ID",
+              "displayName": "Request ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product Input",
+              "displayName": "Product Input",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Details/JSON",
+              "displayName": "Details/JSON",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cost (USD)",
+              "displayName": "Cost (USD)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tokens",
+              "displayName": "Tokens",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        816,
+        320
+      ],
+      "id": "32f4898d-774d-4711-80b1-732ce49390dd",
+      "name": "Log START",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KhtHVzmteUxOelb7",
+          "name": "GOOGLE_SHEETS_CREDENTIALS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log Search products online",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1354713432,
+          "mode": "list",
+          "cachedResultName": "LOG",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1354713432"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Request ID": "={{ $execution.id }}",
+            "Timestamp": "={{ $now.setZone('Europe/Vilnius').format('yyyy-MM-dd HH:mm:ss') }}",
+            "Product Input": "=",
+            "Stage": "SEARCH_COMPLETE",
+            "Details/JSON": "={{ JSON.stringify($json.output.results) }}",
+            "Cost (USD)": "=Tavily: {{ $json.intermediateSteps?.length * 0.01 }}\nGemini 3 Flash: {{ ( ($json.modelData.totalTokens - $json.modelData.promptTokens) * 3.00 / 1e6 + $json.modelData.promptTokens * 0.50 / 1e6).toFixed(5) }}",
+            "Tokens": "=Input: {{ $json.modelData.promptTokens }}\nThinking: {{ $json.modelData.thinkingTokens }}\nOutput: {{ $json.modelData.completionTokens }}\nTotal: {{ $json.modelData.totalTokens }}\n"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Request ID",
+              "displayName": "Request ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product Input",
+              "displayName": "Product Input",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Details/JSON",
+              "displayName": "Details/JSON",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cost (USD)",
+              "displayName": "Cost (USD)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tokens",
+              "displayName": "Tokens",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        208
+      ],
+      "id": "302008d5-03e9-4317-8ddf-a69fdf325906",
+      "name": "Log SEARCH_COMPLETE",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KhtHVzmteUxOelb7",
+          "name": "GOOGLE_SHEETS_CREDENTIALS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log Search products online",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1354713432,
+          "mode": "list",
+          "cachedResultName": "LOG",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1354713432"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Request ID": "={{ $execution.id }}",
+            "Timestamp": "={{ $now.setZone('Europe/Vilnius').format('yyyy-MM-dd HH:mm:ss') }}",
+            "Product Input": "=",
+            "Stage": "EXTRACT_COMPLETE",
+            "Details/JSON": "={{ JSON.stringify($json) }}",
+            "Cost (USD)": "=Gemini 3 Flash: {{ (($('Extract AI').item.json.usageMetadata.promptTokenCount / 1000000) * 0.50\n+ ( $('Extract AI').item.json.usageMetadata.thoughtsTokenCount / 1000000) * 3.00 \n+ ( $('Extract AI').item.json.usageMetadata.candidatesTokenCount / 1000000) * 3.00).toFixed(5) }}",
+            "Tokens": "=Input: {{ $('Extract AI').item.json.usageMetadata.promptTokenCount }}\nThoughts: {{ $('Extract AI').item.json.usageMetadata.thoughtsTokenCount }}\nOutput: {{ $('Extract AI').item.json.usageMetadata.candidatesTokenCount }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Request ID",
+              "displayName": "Request ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product Input",
+              "displayName": "Product Input",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Details/JSON",
+              "displayName": "Details/JSON",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cost (USD)",
+              "displayName": "Cost (USD)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tokens",
+              "displayName": "Tokens",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1776,
+        736
+      ],
+      "id": "644b3410-8e84-4657-b92c-057072adf46a",
+      "name": "Log EXTRACT_COMPLETE",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KhtHVzmteUxOelb7",
+          "name": "GOOGLE_SHEETS_CREDENTIALS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the raw text from the AI output string\nlet rawText = $input.first().json.output || \"\";\n\n// 2. Locate the JSON block (find first { and last })\nconst start = rawText.indexOf('{');\nconst end = rawText.lastIndexOf('}');\n\nif (start !== -1 && end !== -1) {\n    let jsonString = rawText.substring(start, end + 1);\n    try {\n        let data = JSON.parse(jsonString);\n\n        // 3. FIX ATTRIBUTES: \n        // If attributes is an array of objects [{\"Key\": \"Value\"}], flatten it into one object\n        if (Array.isArray(data.attributes)) {\n            const flattenedAttributes = {};\n            data.attributes.forEach(attrObj => {\n                const key = Object.keys(attrObj)[0];\n                if (key) {\n                    flattenedAttributes[key] = attrObj[key];\n                }\n            });\n            data.attributes = flattenedAttributes;\n        }\n\n        // 4. Return the cleaned, structured data\n        return [{ json: data }];\n\n    } catch (e) {\n        throw new Error(\"Found JSON block but it was malformed: \" + e.message);\n    }\n}\n\nthrow new Error(\"No valid JSON found in Synthesis AI output.\");"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        1376
+      ],
+      "id": "0a1acf6c-a550-4cfc-bcb5-f5be312da304",
+      "name": "Cleanup JSON1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log Search products online",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1354713432,
+          "mode": "list",
+          "cachedResultName": "LOG",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1354713432"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Request ID": "={{ $execution.id }}",
+            "Timestamp": "={{ $now.setZone('Europe/Vilnius').format('yyyy-MM-dd HH:mm:ss') }}",
+            "Product Input": "=",
+            "Stage": "SYNTHESIS_COMPLETE",
+            "Details/JSON": "={{ JSON.stringify($json) }}",
+            "Cost (USD)": "=Gemini 3 Pro: {{ ( ($json.modelData.totalTokens - $json.modelData.promptTokens) * 12.00 / 1e6 + $json.modelData.promptTokens * 2.00 / 1e6).toFixed(5) }}",
+            "Tokens": "=Input: {{ $json.modelData.promptTokens }}\nThinking: {{ $json.modelData.thinkingTokens }}\nOutput: {{ $json.modelData.completionTokens }}\nTotal: {{ $json.modelData.totalTokens }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Request ID",
+              "displayName": "Request ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product Input",
+              "displayName": "Product Input",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Details/JSON",
+              "displayName": "Details/JSON",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cost (USD)",
+              "displayName": "Cost (USD)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tokens",
+              "displayName": "Tokens",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1056,
+        1264
+      ],
+      "id": "b2d417cf-b73d-4bea-84dc-e09e708fe82b",
+      "name": "Log SYNTHESIS_COMPLETE",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KhtHVzmteUxOelb7",
+          "name": "GOOGLE_SHEETS_CREDENTIALS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log Search products online",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1354713432,
+          "mode": "list",
+          "cachedResultName": "LOG",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1354713432"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Request ID": "={{ $execution.id }}",
+            "Timestamp": "={{ $now.setZone('Europe/Vilnius').format('yyyy-MM-dd HH:mm:ss') }}",
+            "Product Input": "={{ $('User Inputs').item.json.product_name }}",
+            "Stage": "FINISHED",
+            "Details/JSON": "={{ JSON.stringify($json) }}",
+            "Cost (USD)": "=Search AI: {{ $json.metrics.breakdown.search_agent_usd }}\nSearch Tavily: {{ $json.metrics.breakdown.tavily_usd }}\nExtract AI: {{ $json.metrics.breakdown.extraction_loop_usd }}\nSynthesis AI: {{ $json.metrics.breakdown.synthesis_usd }}\n\nTotal: {{ $json.metrics.total_cost }}\n\n",
+            "Tokens": "=Total tokens used: {{ $json.metrics.total_tokens }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Request ID",
+              "displayName": "Request ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product Input",
+              "displayName": "Product Input",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Details/JSON",
+              "displayName": "Details/JSON",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cost (USD)",
+              "displayName": "Cost (USD)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tokens",
+              "displayName": "Tokens",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        1296
+      ],
+      "id": "218fbf23-08cb-4857-a978-218290ef4c6f",
+      "name": "Log FINISHED",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KhtHVzmteUxOelb7",
+          "name": "GOOGLE_SHEETS_CREDENTIALS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('On form submission').item.json.email }}",
+        "subject": "=AI Ataskaita: {{ $('On form submission').item.json.product_name }}",
+        "message": "=<div style=\"font-family: 'Inter', Helvetica, Arial, sans-serif; background: #f4f7f6; padding: 40px 20px;\">\n  <div style=\"max-width: 650px; margin: auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.05); border: 1px solid #eef2f1;\">\n    \n    <div style=\"background: #2c3e50; padding: 30px; text-align: center; color: #ffffff;\">\n      <h1 style=\"margin: 0; font-size: 24px;\">AI Produkto Ataskaita</h1>\n      <p style=\"opacity: 0.8; margin-top: 10px;\">Jūsų užklausa: \"<b>{{ $('User Inputs').item.json.product_name }}</b>\"</p>\n    </div>\n\n    <div style=\"padding: 40px;\">\n      <h2 style=\"color: #1a1a1a; border-bottom: 2px solid #3498db; padding-bottom: 10px; display: inline-block;\">Gautas rezultatas</h2>\n      <h3 style=\"color: #2c3e50; margin-top: 20px;\">{{ $json.name }}</h3>\n      <p style=\"line-height: 1.6; color: #4a4a4a; font-size: 16px;\">{{ $json.description }}</p>\n      \n      <div style=\"background: #fdf2e9; padding: 15px 25px; border-radius: 12px; margin: 25px 0;\">\n        <span style=\"font-size: 1.3em; font-weight: bold; color: #d35400;\">Rekomenduojama kaina: {{ $json.price || 'Sutartinė' }}</span>\n      </div>\n\n      <h3 style=\"color: #1a1a1a; margin-top: 30px;\">Techninė specifikacija</h3>\n      <div style=\"background: #f9f9f9; padding: 20px; border-radius: 12px;\">\n        <ul style=\"list-style: none; padding: 0; margin: 0;\">\n          {{ Object.entries($json.attributes).map(([key, val]) => `\n            <li style=\"padding: 8px 0; border-bottom: 1px solid #eee;\">\n              <span style=\"color: #7f8c8d; font-size: 12px; text-transform: uppercase;\">${key}</span><br>\n              <b style=\"color: #2c3e50;\">${val}</b>\n            </li>\n          `).join('') }}\n        </ul>\n      </div>\n\n      <h3 style=\"color: #1a1a1a; margin-top: 30px;\">Galerija</h3>\n      <div style=\"text-align: center;\">\n        {{ $json.images.map(img => `<img src=\"${img}\" width=\"130\" style=\"border-radius: 8px; margin: 5px; border: 1px solid #eee;\">`).join('') }}\n      </div>\n\n      <h3 style=\"color: #1a1a1a; margin-top: 30px;\">Analizuoti šaltiniai</h3>\n      <div style=\"background: #eef2f7; padding: 20px; border-radius: 12px;\">\n        <ul style=\"padding-left: 20px; margin: 0; color: #2980b9;\">\n          {{ $('AI Agent Search').item.json.output.results.map(r => `\n            <li style=\"margin-bottom: 10px;\">\n              <a href=\"${r.url}\" style=\"text-decoration: none; font-weight: bold; color: #2980b9;\">${r.website}</a><br>\n              <span style=\"color: #666; font-size: 12px;\">${r.reason}</span>\n            </li>\n          `).join('') }}\n        </ul>\n      </div>\n    </div>\n\n    <div style=\"background: #f8f9fa; padding: 20px 40px; border-top: 1px solid #eee; font-size: 12px; color: #95a5a6; display: flex; justify-content: space-between;\">\n      <div>\n        Ataskaitos savikaina: <b style=\"color: #2c3e50;\">${{$json.metrics.total_cost}} USD</b>\n      </div>\n      <div>\n        Tokenų kiekis: <b style=\"color: #2c3e50;\">{{$json.metrics.total_tokens}}</b>\n      </div>\n    </div>\n  </div>\n</div>",
+        "options": {
+          "appendAttribution": true,
+          "senderName": "Sender Name",
+          "replyTo": "YOUR_EMAIL@DOMAIN.COM"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1744,
+        1472
+      ],
+      "id": "65f64ec2-d73e-4a9f-b824-47009258bd35",
+      "name": "Send report",
+      "webhookId": "cba76afc-5ea3-46ab-9ce4-1bf10d9991f5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ofbPo1rxLl4CaFcn",
+          "name": "GOOGLE_CREDENTIALS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Synthesis",
+        "height": 512,
+        "width": 944,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        336,
+        1248
+      ],
+      "id": "ae55fd5d-5d71-405c-b10b-1c98bb6fc816",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Cost calculator and report",
+        "height": 512,
+        "width": 656,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        1248
+      ],
+      "id": "231756a2-f3c9-4ad5-b389-0e63d94fb5d8",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Input",
+        "height": 496,
+        "width": 736,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        336,
+        176
+      ],
+      "id": "4b4a3d57-1018-44d8-83f8-a97982cfe969",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "code": {
+          "supplyData": {
+            "code": "const llm = await this.getInputConnectionData('ai_languageModel', 0);\nconst workflowStaticData = $getWorkflowStaticData('global');\n\n// 1. Robust way to get the Model Node Name in n8n 2.x/LangChain\n// We pull the node name from the internal configuration of the LLM object\nconst modelNodeName = llm.name || \"Gemini 3 Flash T0\"; \n\n// 2. Initialize storage for this specific node\nif (!workflowStaticData.usage) workflowStaticData.usage = {};\nif (!workflowStaticData.usage[modelNodeName]) {\n    workflowStaticData.usage[modelNodeName] = {\n        promptTokens: 0,\n        completionTokens: 0,\n        totalTokens: 0,\n        thinkingTokens: 0\n    };\n}\n\nllm.callbacks.push({\n    handleLLMEnd(output) {\n        const usage = output.llmOutput?.tokenUsage;\n        if (usage) {\n            const ref = workflowStaticData.usage[modelNodeName];\n            \n            // Calculate thinking tokens\n            const thinking = (usage.totalTokens || 0) - ((usage.promptTokens || 0) + (usage.completionTokens || 0));\n            \n            ref.promptTokens += (usage.promptTokens || 0);\n            ref.completionTokens += (usage.completionTokens || 0);\n            ref.totalTokens += (usage.totalTokens || 0);\n            ref.thinkingTokens += (thinking > 0 ? thinking : 0);\n        }\n    },\n});\n\nreturn llm;"
+          }
+        },
+        "inputs": {
+          "input": [
+            {
+              "type": "ai_languageModel",
+              "maxConnections": 1,
+              "required": true
+            }
+          ]
+        },
+        "outputs": {
+          "output": [
+            {
+              "type": "ai_languageModel"
+            }
+          ]
+        }
+      },
+      "id": "bf262192-b6e7-442a-9310-253373b0f7f3",
+      "name": "Extract Token Usage1",
+      "type": "@n8n/n8n-nodes-langchain.code",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const workflowStaticData = $getWorkflowStaticData('global');\n\n// CONFIG: Set this to the name of the Model Node you want to report on\nconst targetModelNode = \"Gemini 3 Flash T0\";\n\nconst modelUsage = workflowStaticData.usage?.[targetModelNode] || {\n    promptTokens: 0,\n    completionTokens: 0,\n    totalTokens: 0,\n    thinkingTokens: 0\n};\n\nfor (const item of $input.all()) {\n    item.json.modelData = {\n        nodeName: targetModelNode,\n        ...modelUsage\n    };\n}\n\n// // Reset the counter for this specific model node after extraction\n// if (workflowStaticData.usage?.[targetModelNode]) {\n//     workflowStaticData.usage[targetModelNode] = {\n//         promptTokens: 0, completionTokens: 0, totalTokens: 0, thinkingTokens: 0\n//     };\n// }\n\nreturn $input.all();"
+      },
+      "id": "9ead7c0c-161a-4959-a77f-26a2a11b01d4",
+      "name": "modelData1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "code": {
+          "supplyData": {
+            "code": "const llm = await this.getInputConnectionData('ai_languageModel', 0);\nconst workflowStaticData = $getWorkflowStaticData('global');\n\n// 1. Robust way to get the Model Node Name in n8n 2.x/LangChain\n// We pull the node name from the internal configuration of the LLM object\nconst modelNodeName = llm.name || \"Gemini 3 Pro T.7\"; \n\n// 2. Initialize storage for this specific node\nif (!workflowStaticData.usage) workflowStaticData.usage = {};\nif (!workflowStaticData.usage[modelNodeName]) {\n    workflowStaticData.usage[modelNodeName] = {\n        promptTokens: 0,\n        completionTokens: 0,\n        totalTokens: 0,\n        thinkingTokens: 0\n    };\n}\n\nllm.callbacks.push({\n    handleLLMEnd(output) {\n        const usage = output.llmOutput?.tokenUsage;\n        if (usage) {\n            const ref = workflowStaticData.usage[modelNodeName];\n            \n            // Calculate thinking tokens\n            const thinking = (usage.totalTokens || 0) - ((usage.promptTokens || 0) + (usage.completionTokens || 0));\n            \n            ref.promptTokens += (usage.promptTokens || 0);\n            ref.completionTokens += (usage.completionTokens || 0);\n            ref.totalTokens += (usage.totalTokens || 0);\n            ref.thinkingTokens += (thinking > 0 ? thinking : 0);\n        }\n    },\n});\n\nreturn llm;"
+          }
+        },
+        "inputs": {
+          "input": [
+            {
+              "type": "ai_languageModel",
+              "maxConnections": 1,
+              "required": true
+            }
+          ]
+        },
+        "outputs": {
+          "output": [
+            {
+              "type": "ai_languageModel"
+            }
+          ]
+        }
+      },
+      "id": "2701fcec-f3e0-40d2-a8a4-9f7015f18cf9",
+      "name": "Extract Token Usage2",
+      "type": "@n8n/n8n-nodes-langchain.code",
+      "typeVersion": 1,
+      "position": [
+        352,
+        1520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const workflowStaticData = $getWorkflowStaticData('global');\n\n// CONFIG: Set this to the name of the Model Node you want to report on\nconst targetModelNode = \"Gemini 3 Pro T.7\";\n\nconst modelUsage = workflowStaticData.usage?.[targetModelNode] || {\n    promptTokens: 0,\n    completionTokens: 0,\n    totalTokens: 0,\n    thinkingTokens: 0\n};\n\nfor (const item of $input.all()) {\n    item.json.modelData = {\n        nodeName: targetModelNode,\n        ...modelUsage\n    };\n}\n\n// // Reset the counter for this specific model node after extraction\n// if (workflowStaticData.usage?.[targetModelNode]) {\n//     workflowStaticData.usage[targetModelNode] = {\n//         promptTokens: 0, completionTokens: 0, totalTokens: 0, thinkingTokens: 0\n//     };\n// }\n\nreturn $input.all();"
+      },
+      "id": "ccba620a-d864-4f04-96b0-4bd44a159546",
+      "name": "modelData2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        1376
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const workflowStaticData = $getWorkflowStaticData('global');\n\n// 1. Pricing Configuration (USD per 1M tokens)\nconst FLASH_IN = 0.50 / 1000000;\nconst FLASH_OUT = 3.00 / 1000000;\nconst PRO_IN = 2.00 / 1000000;\nconst PRO_OUT = 12.00 / 1000000;\nconst TAVILY_PER_CALL = 0.01;\n\n// --- A. CALCULATE NODE 1 & 3 (From Global Scope) ---\nconst flashSearchUsage = workflowStaticData.usage?.[\"Gemini 3 Flash T0\"] || { promptTokens: 0, completionTokens: 0, thinkingTokens: 0 };\nconst proSynthesisUsage = workflowStaticData.usage?.[\"Gemini 3 Pro T.7\"] || { promptTokens: 0, completionTokens: 0, thinkingTokens: 0 };\n\nlet costSearch = (flashSearchUsage.promptTokens * FLASH_IN) + ((flashSearchUsage.completionTokens + flashSearchUsage.thinkingTokens) * FLASH_OUT);\nlet costSynthesis = (proSynthesisUsage.promptTokens * PRO_IN) + ((proSynthesisUsage.completionTokens + proSynthesisUsage.thinkingTokens) * PRO_OUT);\n\n// --- B. CALCULATE NODE 2 (Iterating over ALL Runs of \"Extract AI\") ---\nlet costExtraction = 0;\nlet totalExtractionTokens = 0;\n\n// Loop through all possible run indices\nlet runIndex = 0;\nwhile (true) {\n    try {\n        // Fetch all items for this specific run (iteration)\n        const runItems = $(\"Extract AI\").all(0, runIndex);\n        \n        for (const item of runItems) {\n            const meta = item.json.usageMetadata;\n            if (meta) {\n                const p = meta.promptTokenCount || 0;\n                const t = meta.thoughtsTokenCount || 0;\n                const c = meta.candidatesTokenCount || 0;\n                \n                costExtraction += (p * FLASH_IN) + ((t + c) * FLASH_OUT);\n                totalExtractionTokens += (p + t + c);\n            }\n        }\n        runIndex++;\n    } catch (e) {\n        // Break the loop when there are no more runs to fetch\n        break;\n    }\n}\n\n// --- C. CALCULATE TAVILY (From Agent Steps) ---\nlet tavilyCalls = 0;\ntry {\n    tavilyCalls = $(\"AI Agent Search\").first().json.intermediateSteps?.length || 0;\n} catch (e) {}\nconst costTavily = tavilyCalls * TAVILY_PER_CALL;\n\n// --- D. FINAL AGGREGATION ---\nconst totalCost = costSearch + costExtraction + costSynthesis + costTavily;\nconst totalTokens = (flashSearchUsage.totalTokens || 0) + totalExtractionTokens + (proSynthesisUsage.totalTokens || 0);\n\nreturn [{\n    json: {\n        ...$input.first().json,\n        metrics: {\n            total_cost: totalCost.toFixed(5),\n            total_tokens: totalTokens,\n            breakdown: {\n                search_agent_usd: costSearch.toFixed(5),\n                extraction_loop_usd: costExtraction.toFixed(5),\n                synthesis_usd: costSynthesis.toFixed(5),\n                tavily_usd: costTavily.toFixed(5)\n            }\n        }\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        1376
+      ],
+      "id": "8b484bd2-c49b-4d5a-aa00-c1b7f432fc7c",
+      "name": "Total Cost Calculator"
+    },
+    {
+      "parameters": {
+        "content": "## 🚀 SETUP & API PREREQUISITES\nAccounts & API Keys Needed:\n* Tavily AI: For deep web searching.\n* Google Gemini (AI Studio): Both Flash (fast extraction) and Pro (high-quality synthesis) models are used.\n* Google Sheets: To log execution costs and token usage.\n* Gmail: To send the final HTML report.\n* Crawl4AI: This workflow requires a Crawl4AI instance. Update the URL in the \"Crawl with Crawl4AI\" and \"crawl result\" nodes.\n\n1. Google Sheets Structure: Ensure your sheet has a tab named LOG with these headers: Timestamp, Request ID, Product Input, Stage, Details/JSON, Cost (USD), Tokens.\n\n2. Gmail Configuration: The \"Send report\" node is pre-configured with a custom HTML template. Ensure your Gmail credentials have Mail Send permissions.\n\n3. Custom Crawl4AI URL: If you are using a local Docker instance, the URL http://crawl4ai:11235 will work. If you use a hosted version, update the HTTP Request nodes accordingly.",
+        "height": 512,
+        "width": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        528
+      ],
+      "id": "df49f71e-bcf5-4ccf-b723-6065d0f60edb",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ SELF-HOSTED ONLY WARNING\n\nIMPORTANT: This workflow utilizes LangChain Code Nodes (Extract Token Usage1 & Extract Token Usage2) to track real-time API costs and token usage.\n\nAvailability: These nodes are ONLY available on self-hosted versions of n8n (Docker, Desktop, VPS). They will not work on n8n Cloud.\n\nFunction: They capture metadata from the Gemini LLM callback to calculate the cost per 1M tokens. If you are on n8n Cloud, you will need to remove these nodes and the \"Cost Calculator\" to run the workflow.",
+        "height": 320,
+        "width": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        176
+      ],
+      "id": "1105fc55-e236-4d3c-adbc-a43b9dbbe76e",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "User Inputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User Inputs": {
+      "main": [
+        [
+          {
+            "node": "Log START",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search in Tavily": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent Search",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent Search",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crawl with Crawl4AI1": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "crawl result1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Extract AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set task_id1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crawl result1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set task_id1": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Search": {
+      "main": [
+        [
+          {
+            "node": "modelData1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crawl with Crawl4AI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract AI": {
+      "main": [
+        [
+          {
+            "node": "Cleanup JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Synthesis AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 3 Pro T.7": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Token Usage2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 3 Flash T0": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Token Usage1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleanup JSON": {
+      "main": [
+        [
+          {
+            "node": "Log EXTRACT_COMPLETE",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Synthesis AI": {
+      "main": [
+        [
+          {
+            "node": "Cleanup JSON1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log START": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log SEARCH_COMPLETE": {
+      "main": [
+        []
+      ]
+    },
+    "Log EXTRACT_COMPLETE": {
+      "main": [
+        []
+      ]
+    },
+    "Cleanup JSON1": {
+      "main": [
+        [
+          {
+            "node": "modelData2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log FINISHED": {
+      "main": [
+        []
+      ]
+    },
+    "Extract Token Usage1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Search",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "modelData1": {
+      "main": [
+        [
+          {
+            "node": "Log SEARCH_COMPLETE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Token Usage2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Synthesis AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "modelData2": {
+      "main": [
+        [
+          {
+            "node": "Log SYNTHESIS_COMPLETE",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Total Cost Calculator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Total Cost Calculator": {
+      "main": [
+        [
+          {
+            "node": "Log FINISHED",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "860d7394-f173-4816-9607-7668f58461cf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4d1c47587479f9208d0237bbcd164747c606840ccd9f8eb80362442270d3cfe1"
+  },
+  "id": "WqOhCaWQ1ojjqali",
+  "tags": []
+}
