@@ -1,0 +1,1620 @@
+{
+  "name": "OpenCart Product AI Enrichment (Template)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1488,
+        -1136
+      ],
+      "id": "9e4809b1-0a80-4bdf-96bd-041b54e73d73",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1488,
+        -1328
+      ],
+      "id": "e87caaf5-324c-4c06-8058-33057222b8d1",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT op.product_id, op.model, \n\t\top.manufacturer_id, om.name,\n\t\top.date_added, op.date_modified, op.quantity_supplier,\n\t\topd.name, opd.description, opd.meta_description, opd.meta_keyword\nFROM oc_product op \nINNER JOIN oc_product_description opd on op.product_id = opd.product_id and opd.meta_description = '' \nINNER JOIN oc_manufacturer om on op.manufacturer_id = om.manufacturer_id \nWHERE op.quantity_supplier > 0 \nLIMIT 1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1264,
+        -1232
+      ],
+      "id": "c90f31f8-6912-4a4b-ab22-58328329dcc7",
+      "name": "Select products",
+      "credentials": {
+        "mySql": {
+          "id": "SWFgCejA1GNNOWiE",
+          "name": "MySQL Login"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Description",
+        "height": 384,
+        "width": 976,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        -1280
+      ],
+      "id": "6e654421-cf95-43b0-b198-ffed870ff5ec",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Categories",
+        "height": 464,
+        "width": 1824,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        -880
+      ],
+      "id": "5849eb45-beac-41b6-9a00-4954c77e18e2",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH RECURSIVE CategoryTree AS (\n    -- 1. ANCHOR: Select Top-Level Categories (Parent_ID = 0)\n    SELECT \n        c.category_id, \n        CAST(cd.name AS CHAR(1000)) AS path_name\n    FROM oc_category c\n    LEFT JOIN oc_category_description cd ON (c.category_id = cd.category_id)\n    WHERE c.parent_id = 0 \n      AND cd.language_id = 2 -- CHANGE THIS TO YOUR LANGUAGE ID\n      AND c.status = 1       -- Active categories only\n\n    UNION ALL\n\n    -- 2. RECURSIVE: Join children to their parents\n    SELECT \n        c.category_id, \n        CONCAT(ct.path_name, ' > ', cd.name) AS path_name\n    FROM oc_category c\n    LEFT JOIN oc_category_description cd ON (c.category_id = cd.category_id)\n    INNER JOIN CategoryTree ct ON (c.parent_id = ct.category_id)\n    WHERE cd.language_id = 2 -- CHANGE THIS TO YOUR LANGUAGE ID\n      AND c.status = 1\n)\n-- 3. FINAL SELECT: Join with product counts and filter\nSELECT \n    ct.category_id,\n    ct.path_name,\n    COUNT(p2c.product_id) AS product_count\nFROM CategoryTree ct\nLEFT JOIN oc_product_to_category p2c ON (ct.category_id = p2c.category_id)\nGROUP BY ct.category_id, ct.path_name\nHAVING COUNT(p2c.product_id) > 0 -- FILTER: Only show categories that actually contain products\nORDER BY ct.path_name;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -864,
+        -752
+      ],
+      "id": "98e0be5f-3cf6-4953-8f77-41a275279526",
+      "name": "Select categories with products in them",
+      "credentials": {
+        "mySql": {
+          "id": "SWFgCejA1GNNOWiE",
+          "name": "MySQL Login"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"title\": \"<Product Title according to rules>\",\n  \"description\": \"<Product description according to rules>\",\n  \"meta_description\": \"<Short SEO description, 150-160 chars>\",\n  \"meta_keyword\": \"<5-10 keywords, comma separated, lowercase>\",\n  \"url_slug\": \"<seo-friendly-url-slug>\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -752,
+        -1024
+      ],
+      "id": "74525165-a258-4720-94f7-662f995cae95",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1168,
+        -944
+      ],
+      "id": "80e63c5d-b31a-43a7-9cae-278f444e0e5f",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## Overview\nYou are a professional eCommerce copywriter and translator. Your goal is to create accurate, sales-driven, and SEO-optimized product descriptions.\n\nThe provided product information is in [SOURCE LANGUAGE]. Translate it to [TARGET LANGUAGE] and adapt it for the local market.\n\n## Terminology Rules (Strict):\n1. **No Hallucinations:** Do not invent words. Use standard [TARGET LANGUAGE] terminology.\n2. **Specific Translations:**\n   - [Term A] = [Term B]\n   - [Term C] = [Term D]\n3. **Style:** The text must be fluent, professional, and technically accurate.\n\n## Input Data:\n### Name:\n{{ $('Select products').item.json.name }}\n\n### Manufacturer:\n{{ $('Select products').item.json.manufacturer_name }}\n\n### Description:\n{{ $('Select products').item.json.description }}\n\n### Product Code:\n{{ $('Select products').item.json.model }}\n\n## Format Requirements:\n\n### Title Format: \nMain Keyword | Attribute (Color, Type, etc.) | Manufacturer + Code.\n\n### URL Slug Format:\nCreate an SEO-friendly slug:\n1. Lowercase only.\n2. Replace special characters with latin equivalents (e.g., š->s, ü->u).\n3. Replace spaces with hyphens (-).\n4. Remove punctuation.\n5. Example: \"wooden-arcade-game-target-practice-brand-123\"\n\n### Meta Keywords:\n1. Generate 5–10 relevant keywords, separated by commas.\n2. Include product type, material, features, and synonyms.\n3. Lowercase only.\n\n### Description Format:\n1. Rewrite the text for SEO while maintaining factual accuracy.\n2. Use standard sentence case.\n3. **HTML Formatting:** Use `div id`, `h2`, `h3`, `p`, and `ul` tags.\n4. Remove any external links or video embeds.\n5. Add a final paragraph about the manufacturer/brand.\n6. **HTML Structure Example:**\n<body>\n  <div id=\"product-slug-name\">\n    <h2>Product Title</h2>\n    <p>Engaging marketing intro text describing the product.</p>\n\n    <h3>Features:</h3>\n    <ul>\n      <li>Feature 1.</li>\n      <li>Feature 2.</li>\n    </ul>\n\n    <h3>Educational Value / Benefits:</h3>\n    <ul>\n      <li>Benefit 1.</li>\n      <li>Benefit 2.</li>\n    </ul>\n\n    <p><b>Brand Name</b> is a company known for...</p>\n  </div>\n</body>",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -896,
+        -1216
+      ],
+      "id": "ac33b27b-9caf-4f11-89f2-e86407e92e9a",
+      "name": "Name and Description"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": {
+          "__rl": true,
+          "value": "oc_product_description",
+          "mode": "name"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "product_id",
+        "valueToMatchOn": "={{ $('Select products').item.json.product_id }}",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "name",
+              "value": "={{ $('Name and Description').item.json.output.title }}"
+            },
+            {
+              "column": "description",
+              "value": "={{ $('Name and Description').item.json.output.description }}"
+            },
+            {
+              "column": "meta_description",
+              "value": "={{ $('Name and Description').item.json.output.meta_description }}"
+            },
+            {
+              "column": "meta_keyword",
+              "value": "={{ $('Name and Description').item.json.output.meta_keyword }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -448,
+        -1216
+      ],
+      "id": "04d7ffbb-5e61-481a-aabd-8a747a3bcb2d",
+      "name": "Update product_description",
+      "credentials": {
+        "mySql": {
+          "id": "SWFgCejA1GNNOWiE",
+          "name": "MySQL Login"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "table": {
+          "__rl": true,
+          "value": "oc_url_alias",
+          "mode": "name"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "query",
+        "valueToMatchOn": "=product_id={{ $('Select products').item.json.product_id }}",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "keyword",
+              "value": "={{ $json.output.url_slug }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -576,
+        -1216
+      ],
+      "id": "b74802bb-c772-4657-b5cf-ad09c19c4c3e",
+      "name": "Update url_alias",
+      "credentials": {
+        "mySql": {
+          "id": "SWFgCejA1GNNOWiE",
+          "name": "MySQL Login"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log File",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Info",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_id": "={{ $json.product_id }}",
+            "model": "={{ $json.model }}",
+            "description": "={{ $json.description }}",
+            "DB url_slug": "false",
+            "DB product_description": "false",
+            "DB product_to_category": "false",
+            "DB Filters": "false",
+            "DB attributes": "false"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1120,
+        -1232
+      ],
+      "id": "3b790f8b-979e-444f-b43c-018093e8bd6d",
+      "name": "Log product",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ct2XeEQxR3cdsvzG",
+          "name": "d.s n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log File",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Info",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "AI title": "={{ $json.output.title }}",
+            "AI description": "={{ $json.output.description }}",
+            "AI meta_description": "={{ $json.output.meta_description }}",
+            "AI url_slug": "={{ $json.output.url_slug }}",
+            "product_id": "={{ $('Select products').item.json.product_id }}",
+            "AI meta_keywords": "={{ $json.output.meta_keyword }}"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -576,
+        -1056
+      ],
+      "id": "af8799d1-3da8-4f53-a9af-8c62bae38ae5",
+      "name": "Log AI info",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ct2XeEQxR3cdsvzG",
+          "name": "d.s n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log File",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Info",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_id": "={{ $('Select products').item.json.product_id }}",
+            "DB url_slug": "={{ $('Update url_alias').item.json.success }}",
+            "DB product_description": "={{ $json.success }}"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -256,
+        -1264
+      ],
+      "id": "1c0922e2-1674-488e-a791-2a50911e67bd",
+      "name": "Log DB status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ct2XeEQxR3cdsvzG",
+          "name": "d.s n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -320,
+        -752
+      ],
+      "id": "f17a1056-57bf-4d0d-b473-c3b5af1d32c1",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=### PRODUCT DATA\n**Name:** \n{{ $json['AI title'] }}\n\n**Description:** \n{{ $json['AI description'] }}\n\n### VALID CATEGORY LIST (ID: Path)\n{{ $json.formatted_category_list }}",
+        "options": {
+          "systemMessage": "You are an expert eCommerce taxonomy specialist. Your task is to assign the correct category IDs to a product based on its name and description.\n\n### RULES:\n1. **Specificity is Key:** Always choose the **deepest, most specific** category available.\n   - Example: If the product is a \"Gaming Laptop\", and you have categories \"Electronics\" and \"Electronics > Computers > Laptops\", select ONLY \"Electronics > Computers > Laptops\".\n   - **DO NOT** select the parent category if you have selected its child.\n\n2. **Multiple Categories:** A product can belong to multiple *distinct* category trees.\n   - Example: A \"LEGO Table\" might belong to:\n     - \"Furniture\"\n     - \"Toys > Building Blocks\"\n   - In this case, select the deepest node for *both* branches.\n\n3. **Strict Source:** You must ONLY choose IDs from the provided \"Valid Category List\". If the product fits nowhere, return an empty list.\n\n4. **Output Format:** Return ONLY a raw JSON array of integers. Do not write explanations, do not use Markdown code blocks (```json), just the array.\n   - Example: [109, 215]"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -128,
+        -752
+      ],
+      "id": "04f0ee84-bf57-49dc-b970-c67a336b9908",
+      "name": "Category selection"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log File",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Info",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_id": "={{ $json.product_id }}",
+            "Categories": "={{ $json.final_log_cell }}"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        -576
+      ],
+      "id": "719bf9b3-938e-428b-9afa-c24c37273c7a",
+      "name": "Log AI category",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ct2XeEQxR3cdsvzG",
+          "name": "d.s n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const productId =  $('Merge').first().json.product_id// Ensure this matches your input variable name\n  const mapString = $('Merge').first().json.formatted_category_list; // The list from the Merge node\n  \n  let categoryIds = [];\n  \n  // 1. Parse AI Output (Handle string or array)\n  try {\n    // The AI Agent output field usually is 'output' or 'text'\n    let aiRaw = item.json.output || item.json.text; \n    \n    if (typeof aiRaw === 'string') {\n        // Clean markdown (```json ... ```) if present\n        aiRaw = aiRaw.replace(/```json|```/g, '').trim();\n        categoryIds = JSON.parse(aiRaw);\n    } else if (Array.isArray(aiRaw)) {\n        categoryIds = aiRaw;\n    }\n  } catch (e) {\n    // If AI returns garbage, skip this product\n    continue;\n  }\n\n  // 2. Process each Category ID\n  if (Array.isArray(categoryIds)) {\n      for (const catId of categoryIds) {\n        // Regex to find \"135: Category Path...\" in your big list string\n        const regex = new RegExp(`^${catId}: (.*)$`, 'm');\n        const match = mapString.match(regex);\n        const categoryPath = match ? match[1] : \"Unknown Path\";\n    \n        results.push({\n          json: {\n            product_id: productId,\n            category_id: catId,\n            // This is the string you wanted for your logs:\n            log_message: `${catId}: ${categoryPath}` \n          }\n        });\n      }\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -752
+      ],
+      "id": "647abdf8-ed72-4b4a-9c3f-7e968f1317e0",
+      "name": "Code Categories Cleanup"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT IGNORE INTO oc_product_to_category (product_id, category_id)\nVALUES ({{ $json.product_id }}, {{ $json.category_id }});",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        352,
+        -752
+      ],
+      "id": "2345b349-6f43-405e-827c-ffd3dc8eb83d",
+      "name": "Insert categories",
+      "credentials": {
+        "mySql": {
+          "id": "SWFgCejA1GNNOWiE",
+          "name": "MySQL Login"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log File",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Info",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_id": "={{ $('Merge').item.json.product_id }}",
+            "DB product_to_category": "={{ $json.success }}"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        -752
+      ],
+      "id": "9886fac6-30bd-454a-8150-dd15e2550199",
+      "name": "Log DB categories insert status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ct2XeEQxR3cdsvzG",
+          "name": "d.s n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const groups = {};\n\n// 1. Group items by Product ID\nfor (const item of $input.all()) {\n  const pid = item.json.product_id;\n  const msg = item.json.log_message; // The single line string created in the previous node\n\n  if (!groups[pid]) {\n    groups[pid] = {\n      product_id: pid,\n      logs: []\n    };\n  }\n  \n  // Add this category to the list for this product\n  groups[pid].logs.push(msg);\n}\n\n// 2. Output one item per product with combined text\nreturn Object.values(groups).map(group => ({\n  json: {\n    product_id: group.product_id,\n    // This creates the single cell content with line breaks\n    final_log_cell: group.logs.join('\\n') \n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -576
+      ],
+      "id": "ede9e183-d312-4ccb-a151-b5d43ab835ea",
+      "name": "Code Group Categories"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all items from the SQL node\nconst categories = $input.all();\n\n// Create a single string formatted like: \"ID: Category Path\"\nconst formattedList = categories.map(item => {\n  return `${item.json.category_id}: ${item.json.path_name}`;\n}).join('\\n');\n\n// Return it to be used in the User Prompt\nreturn {\n  json: {\n    formatted_category_list: formattedList\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        -752
+      ],
+      "id": "8d32cee3-25be-4c9e-90f2-e232f10e9cb7",
+      "name": "Code Format Categories"
+    },
+    {
+      "parameters": {
+        "content": "## Filters",
+        "height": 384,
+        "width": 1824
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        -368
+      ],
+      "id": "fb5468df-275f-4aa1-acb9-67bba583137e",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    f.filter_id,\n    -- Create a clear path: \"Group Name > Filter Name\"\n    CONCAT(fgd.name, ' > ', fd.name) AS filter_path,\n    COUNT(pf.product_id) as usage_count\nFROM oc_filter f\nJOIN oc_filter_description fd ON (f.filter_id = fd.filter_id AND fd.language_id = 2) -- CHANGE LANGUAGE ID\nJOIN oc_filter_group_description fgd ON (f.filter_group_id = fgd.filter_group_id AND fgd.language_id = 2) -- CHANGE LANGUAGE ID\nLEFT JOIN oc_product_filter pf ON (f.filter_id = pf.filter_id)\nGROUP BY f.filter_id, fgd.name, fd.name\nHAVING usage_count > 0\nORDER BY fgd.name, fd.name;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -880,
+        -288
+      ],
+      "id": "b198ef09-ede9-4f49-bb21-fdf6f895c639",
+      "name": "Select all filters",
+      "credentials": {
+        "mySql": {
+          "id": "SWFgCejA1GNNOWiE",
+          "name": "MySQL Login"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all items from the SQL node\nconst filters = $input.all();\n\n// Create a single string formatted like: \"ID: filter Path\"\nconst formattedList = filters.map(item => {\n  return `${item.json.filter_id}: ${item.json.filter_path}`;\n}).join('\\n');\n\n// Return it to be used in the User Prompt\nreturn {\n  json: {\n    formatted_filter_list: formattedList\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        -288
+      ],
+      "id": "0c267675-9789-46fd-ae50-7f50dff5a8b8",
+      "name": "Code Format Filters"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -352,
+        -304
+      ],
+      "id": "e8ed7e17-a6d4-4be3-9694-13cb0524ded4",
+      "name": "Merge filters"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=### PRODUCT DATA\n**Name:**\n{{ $json['AI title'] }}\n**Description:**\n{{ $json['AI description'] }}\n\n### CURRENTLY ASSIGNED FILTERS\n{{ $json.current_filters || \"None\" }}\n\n### VALID FILTER LIST (ID: Group > Name)\n{{ $json.formatted_filter_list }}",
+        "options": {
+          "systemMessage": "=You are an expert eCommerce specialist. Your task is to assign technical **Filters** to a product.\n\n### RULES:\n1. **Analyze the Product:** Look at the Name and Description to determine attributes like Age, Material, Functions, etc.\n\n2. **Age Logic (If applicable):**\n   - **Range Specified:** If the description explicitly states a range (e.g., \"3-6 years\"), select ONLY the filters within that start and end (3, 4, 5, 6).\n   - **Only Minimum Specified:** If the description only says \"from X years\" (e.g., \"from 18 months\" or \"from 3 years\"), assume the toy is interesting for a maximum of **3 years** beyond the start age.\n     - *Example:* \"From 1.5 years\" -> Select filters for 1.5, 2, 2.5, 3, 4 (Stop there).\n     - *Example:* \"From 3 years\" -> Select filters for 3, 4, 5, 6 (Stop there).\n   - **Do not** blindly select every age filter until the end of the list.\n\n3. **Strict Source:** You must ONLY choose IDs from the provided \"VALID FILTER LIST\".\n\n4. **Output:** Return ONLY a raw JSON array of integers.\n   - Example: [18, 19, 36]"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -176,
+        -304
+      ],
+      "id": "16431671-de45-4648-96d6-273e093cc2f9",
+      "name": "Filter selection"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const productId = $('Merge filters').first().json.product_id;\n  const mapString = $('Merge filters').first().json.formatted_filter_list; // Ensure this variable is passed through\n  \n  let filterIds = [];\n  \n  // 1. Parse AI Output\n  try {\n    let aiRaw = item.json.output || item.json.text; \n    if (typeof aiRaw === 'string') {\n        aiRaw = aiRaw.replace(/```json|```/g, '').trim();\n        filterIds = JSON.parse(aiRaw);\n    } else if (Array.isArray(aiRaw)) {\n        filterIds = aiRaw;\n    }\n  } catch (e) { continue; }\n\n  // 2. Process each Filter ID\n  if (Array.isArray(filterIds)) {\n      for (const fId of filterIds) {\n        // Regex to find \"18: Filter Name...\"\n        const regex = new RegExp(`^${fId}: (.*)$`, 'm');\n        const match = mapString.match(regex);\n        const filterPath = match ? match[1] : \"Unknown Filter\";\n    \n        results.push({\n          json: {\n            product_id: productId,\n            filter_id: fId,\n            log_message: `${fId}: ${filterPath}`\n          }\n        });\n      }\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -304
+      ],
+      "id": "d9177645-89de-4fdb-ba60-4804487eb3f3",
+      "name": "Code Filters Cleanup"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT IGNORE INTO oc_product_filter (product_id, filter_id)\nVALUES ({{ $json.product_id }}, {{ $json.filter_id }});",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        384,
+        -304
+      ],
+      "id": "10817e8a-3112-4896-ae14-fda2408e46fb",
+      "name": "Insert filters",
+      "credentials": {
+        "mySql": {
+          "id": "SWFgCejA1GNNOWiE",
+          "name": "MySQL Login"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log File",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Info",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_id": "={{ $('Merge filters').item.json.product_id }}",
+            "DB Filters": "={{ $json.success }}"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        -304
+      ],
+      "id": "ee5a76fa-d8bc-4e73-b7dc-0e0f14a34be1",
+      "name": "Log DB filters insert status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ct2XeEQxR3cdsvzG",
+          "name": "d.s n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const groups = {};\n\n// 1. Group items by Product ID\nfor (const item of $input.all()) {\n  const pid = item.json.product_id;\n  const msg = item.json.log_message; // The single line string created in the previous node\n\n  if (!groups[pid]) {\n    groups[pid] = {\n      product_id: pid,\n      logs: []\n    };\n  }\n  \n  // Add this category to the list for this product\n  groups[pid].logs.push(msg);\n}\n\n// 2. Output one item per product with combined text\nreturn Object.values(groups).map(group => ({\n  json: {\n    product_id: group.product_id,\n    // This creates the single cell content with line breaks\n    final_log_cell: group.logs.join('\\n') \n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        -144
+      ],
+      "id": "5728e2b8-13a0-45e0-b047-0b0356cd0434",
+      "name": "Code Group Filters"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log File",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Info",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_id": "={{ $json.product_id }}",
+            "AI Filters": "={{ $json.final_log_cell }}"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -144
+      ],
+      "id": "eae384ea-7929-45d2-bb13-0328956bf345",
+      "name": "Log AI Filters",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ct2XeEQxR3cdsvzG",
+          "name": "d.s n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -96,
+        -1152
+      ],
+      "id": "000673bf-8024-4228-8132-1933fc7044fd",
+      "name": "Continue1"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        720,
+        -688
+      ],
+      "id": "2de88532-e26e-44ed-a937-7c0bf858e851",
+      "name": "Continue2"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        768,
+        -240
+      ],
+      "id": "391aba4e-c6bf-435d-8ef3-bd6de0fce43d",
+      "name": "Continue3"
+    },
+    {
+      "parameters": {
+        "content": "## Attribute",
+        "height": 400,
+        "width": 1824
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -944,
+        64
+      ],
+      "typeVersion": 1,
+      "id": "d8cc38ed-d1e9-4072-86f0-998fd54bd64d",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=### PRODUCT DATA\n**Name:** \n{{ $('Log AI info').item.json['AI title'] }}\n**Description:** \n{{ $('Log AI info').item.json['AI description'] }}",
+        "options": {
+          "systemMessage": "=You are a Data Entry Specialist for an OpenCart store. Your task is to extract specific product attributes from the description and format them strictly according to store standards.\n\n### ATTRIBUTE DEFINITIONS:\n\n**ID 12: \"Age Recommendation\" (Custom for Client)**\n- Extract the minimum age.\n- **CONVERSION RULE (CRITICAL):**\n  - If the text says **months** and the number is **12 or greater**, you MUST convert it to **years**.\n  - **Math:** Divide months by 12.\n  - *Examples:*\n    - \"12 months\" -> \"1 y.\"\n    - \"18 months\" -> \"1.5 y.\"\n    - \"24 months\" -> \"2 y.\"\n    - \"36 months\" -> \"3 y.\"\n- **Formatting:**\n  - Use **\"y.\"** for years.\n  - Use **\"m.\"** ONLY if the age is strictly **less than 12 months** (e.g., \"6 m.\", \"9 m.\").\n  - Use a **dot** for decimals (e.g., \"1.5 y.\").\n  - If text says \"3+\", write \"3 + y.\".\n\n**ID 13: \"Product Type\"**\n- Identify the category noun of the item.\n- **Format:** Capitalized, singular, 1-3 words.\n- **Examples:** \"Doll\", \"Scooter\", \"Wooden Blocks\", \"Playground\".\n\n### OUTPUT FORMAT:\nReturn a raw JSON array of objects. Do not wrap in markdown.\nExample:\n[\n  { \"attribute_id\": 12, \"text\": \"1.5 y.\" },\n  { \"attribute_id\": 13, \"text\": \"Scooter\" }\n]"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -848,
+        128
+      ],
+      "id": "81f2efc7-08ed-4276-b5d3-c12ad219e9cb",
+      "name": "Create attribute"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const productId = item.json.product_id;\n  \n  let attributes = [];\n  \n  // 1. Parse AI Output\n  try {\n    let aiRaw = item.json.output || item.json.text; \n    \n    if (typeof aiRaw === 'string') {\n        // Clean markdown code blocks\n        aiRaw = aiRaw.replace(/```json|```/g, '').trim();\n        attributes = JSON.parse(aiRaw);\n    } else if (Array.isArray(aiRaw)) {\n        attributes = aiRaw;\n    }\n  } catch (e) {\n    // If parsing fails, skip\n    continue;\n  }\n\n  // 2. Process each Attribute\n  if (Array.isArray(attributes)) {\n      for (const attr of attributes) {\n        // Skip empty values if AI couldn't find an age\n        if (!attr.text || attr.text === \"\") continue;\n\n        results.push({\n          json: {\n            product_id: productId,\n            attribute_id: attr.attribute_id,\n            language_id: 2, // CHANGE TO YOUR LANGUAGE ID\n            text: attr.text\n          }\n        });\n      }\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        128
+      ],
+      "id": "2765f368-dfc7-43b3-9253-413489046701",
+      "name": "Attribute cleanup"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        64,
+        208
+      ],
+      "id": "7e5265ad-82a2-417d-815d-cfa3f404912c",
+      "name": "Continue4"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO oc_product_attribute (product_id, attribute_id, language_id, text)\nVALUES (\n  {{ $('Select products').item.json.product_id }}, \n  {{ $json.attribute_id }}, \n  {{ $json.language_id }}, \n  '{{ $json.text }}'\n)\nON DUPLICATE KEY UPDATE \n    text = VALUES(text);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -336,
+        128
+      ],
+      "id": "902dc890-1198-4e1f-84de-3c5ae67c092e",
+      "name": "Insert attributes",
+      "credentials": {
+        "mySql": {
+          "id": "SWFgCejA1GNNOWiE",
+          "name": "MySQL Login"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const groups = {};\n\nfor (const item of $input.all()) {\n  const pid = $('Select products').first().json.product_id;\n  // Create a readable string: \"ID 12: 3 y.\"\n  const msg = `Attr ${item.json.attribute_id}: ${item.json.text}`; \n\n  if (!groups[pid]) {\n    groups[pid] = {\n      product_id: pid,\n      logs: []\n    };\n  }\n  groups[pid].logs.push(msg);\n}\n\nreturn Object.values(groups).map(group => ({\n  json: {\n    product_id: group.product_id,\n    final_log_cell: group.logs.join('\\n') \n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        304
+      ],
+      "id": "449e213e-c8bc-4cb9-9a8b-ea4e6b7d3062",
+      "name": "Code Group Attributes"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log File",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Info",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_id": "={{ $json.product_id }}",
+            "AI Attributes": "={{ $json.final_log_cell }}"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -144,
+        304
+      ],
+      "id": "0d184aa7-bc09-41ce-bf8e-41684781158c",
+      "name": "Log AI Attributes",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ct2XeEQxR3cdsvzG",
+          "name": "d.s n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Log File",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Info",
+          "cachedResultUrl": "[https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID](https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID)"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_id": "={{ $('Select products').item.json.product_id }}",
+            "DB attributes": "={{ $json.success }}"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -144,
+        128
+      ],
+      "id": "e2fa1462-84e3-4acd-a455-f6a099461f69",
+      "name": "Log DB attributes insert status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ct2XeEQxR3cdsvzG",
+          "name": "d.s n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 🚀 CRITICAL SETUP INSTRUCTIONS\n1. Credentials Needed:\n- MySQL: Connect to your OpenCart Database.\n- Google Gemini: API Key from Google AI Studio.\n- Google Sheets: To log changes and prevent double-processing.\n\n2. Language ID (Crucial): This workflow is currently set to Language ID: 2. If your store uses a different ID (e.g., English is usually 1), you must update the SQL queries in the \"Select categories\", \"Select all filters\", and \"Attribute cleanup\" nodes.\n\n3. Google Sheet Structure: Your Sheet must have these headers in the first row: product_id, model, description, AI title, AI description, AI meta_description, AI url_slug, AI meta_keywords, AI Filters, AI Attributes, DB url_slug, DB product_description, DB product_to_category, DB Filters, DB attributes.\n\n4. Custom Attribute IDs: The \"Create attribute\" agent is trained for ID 12 (Age) and ID 13 (Product Type). Change these in the System Prompt if your store uses different IDs.\n\n\n[Guide](https://docs.n8n.io/workflows/components/sticky-notes/)",
+        "height": 496,
+        "width": 816,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2064,
+        -960
+      ],
+      "id": "cc05ec2c-e201-484b-b1eb-71a291ddf0f0",
+      "name": "Sticky Note5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Select products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select products": {
+      "main": [
+        [
+          {
+            "node": "Log product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Select products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Name and Description",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Name and Description",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Category selection",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Filter selection",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create attribute",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Name and Description": {
+      "main": [
+        [
+          {
+            "node": "Log AI info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update url_alias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update product_description": {
+      "main": [
+        [
+          {
+            "node": "Log DB status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update url_alias": {
+      "main": [
+        [
+          {
+            "node": "Update product_description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log product": {
+      "main": [
+        [
+          {
+            "node": "Name and Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log AI info": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge filters",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Continue1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Log DB status": {
+      "main": [
+        [
+          {
+            "node": "Continue1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select categories with products in them": {
+      "main": [
+        [
+          {
+            "node": "Code Format Categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Category selection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Category selection": {
+      "main": [
+        [
+          {
+            "node": "Code Categories Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Categories Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Code Group Categories",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Insert categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log AI category": {
+      "main": [
+        [
+          {
+            "node": "Continue2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code Group Categories": {
+      "main": [
+        [
+          {
+            "node": "Log AI category",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert categories": {
+      "main": [
+        [
+          {
+            "node": "Log DB categories insert status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Format Categories": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Log DB categories insert status": {
+      "main": [
+        [
+          {
+            "node": "Continue2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select all filters": {
+      "main": [
+        [
+          {
+            "node": "Code Format Filters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Format Filters": {
+      "main": [
+        [
+          {
+            "node": "Merge filters",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge filters": {
+      "main": [
+        [
+          {
+            "node": "Filter selection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter selection": {
+      "main": [
+        [
+          {
+            "node": "Code Filters Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Filters Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Insert filters",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code Group Filters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert filters": {
+      "main": [
+        [
+          {
+            "node": "Log DB filters insert status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Group Filters": {
+      "main": [
+        [
+          {
+            "node": "Log AI Filters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log DB filters insert status": {
+      "main": [
+        [
+          {
+            "node": "Continue3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log AI Filters": {
+      "main": [
+        [
+          {
+            "node": "Continue3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Continue1": {
+      "main": [
+        [
+          {
+            "node": "Select categories with products in them",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue2": {
+      "main": [
+        [
+          {
+            "node": "Select all filters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue3": {
+      "main": [
+        [
+          {
+            "node": "Create attribute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create attribute": {
+      "main": [
+        [
+          {
+            "node": "Attribute cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attribute cleanup": {
+      "main": [
+        [
+          {
+            "node": "Insert attributes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code Group Attributes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Group Attributes": {
+      "main": [
+        [
+          {
+            "node": "Log AI Attributes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert attributes": {
+      "main": [
+        [
+          {
+            "node": "Log DB attributes insert status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log DB attributes insert status": {
+      "main": [
+        [
+          {
+            "node": "Continue4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log AI Attributes": {
+      "main": [
+        [
+          {
+            "node": "Continue4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Continue4": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "ee96e47d-89f7-4762-baae-b9c4c36e2719",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4d1c47587479f9208d0237bbcd164747c606840ccd9f8eb80362442270d3cfe1"
+  },
+  "id": "inG7aBoPrNa0r4KN",
+  "tags": []
+}

@@ -25,7 +25,7 @@ I believe that the future of commerce is **autonomous**. From customer support t
 
 | Workflow Name | Description | Status |
 | :--- | :--- | :--- |
-| **OpenCart 1.5.6 Product AI Enrichment** | Enchances added product infomation by translating, adding title, description, selecting categories, filters, creating attributes. | ✅ Available |
+| [**OpenCart 1.5.6 Product AI Enrichment**](./opencart-1.5.6-ai-enrichment) | Enchances added product infomation by translating, adding title, description, selecting categories, filters, creating attributes. | ✅ Available |
 
 ---
 
